@@ -3,6 +3,12 @@
 <!-- GAS version は deploy.yml の clasp version で自動作成されます。
      各リリースの GAS バージョン番号は GitHub Actions のジョブサマリーで確認できます。 -->
 
+## [1.6.0] - 2026-09-08
+### Added
+- 動画シートの D2 に YouTube 動画 ID を記録するようにした
+  - WebUI でサムネイル表示と YouTube へのリンクに使う
+  - 既存シートにも次回実行時に自動で補完される
+
 ## [1.5.2] - 2026-09-06
 ### Fixed
 - `_bookmarks` シートを `PRESERVE_SHEET_NAMES` に追加
