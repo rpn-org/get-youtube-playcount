@@ -21,7 +21,7 @@ function processVideo_(ss, id, index, total, now, preloadedVideo) {
 
     const { fullTitle, viewCount, publishedAt, channelId, channelTitle } = parseVideoData_(video);
     const sheetName = buildSheetName_(fullTitle, id);
-    const sheet     = getOrCreateVideoSheet_(ss, sheetName, fullTitle, publishedAt, channelId, channelTitle);
+    const sheet     = getOrCreateVideoSheet_(ss, sheetName, fullTitle, publishedAt, channelId, channelTitle, id);
 
     // 同一タイムスタンプが既に存在する場合はスキップ（冪等性の担保）
     // CONFIG.FORCE_WRITE = true のときはスキップしない
@@ -82,19 +82,29 @@ function buildSheetName_(fullTitle, fallback) {
  * @param {string} sheetName
  * @param {string} fullTitle
  * @param {Date}   publishedAt
+ * @param {string} channelId
+ * @param {string} channelTitle
+ * @param {string} videoId       YouTube 動画 ID（D2 に記録。サムネイル・リンクに使う）
  * @returns {GoogleAppsScript.Spreadsheet.Sheet}
  */
-function getOrCreateVideoSheet_(ss, sheetName, fullTitle, publishedAt, channelId, channelTitle) {
+function getOrCreateVideoSheet_(ss, sheetName, fullTitle, publishedAt, channelId, channelTitle, videoId) {
   let sheet = ss.getSheetByName(sheetName);
 
   if (sheet) {
-    if (!sheet.getRange('A2').getValue()) {
+    // ヘッダー行は 1 回で読む（全動画 × 毎実行で効いてくるため）
+    const [publishedCell, channelIdCell, , videoIdCell] = sheet.getRange('A2:D2').getValues()[0];
+
+    if (!publishedCell) {
       sheet.getRange('A2').setValue(publishedAt);
     }
     // 既存シートにチャンネル情報が未記入の場合のみ補完
-    if (channelId && !sheet.getRange('B2').getValue()) {
+    if (channelId && !channelIdCell) {
       sheet.getRange('B2').setValue(channelId);
       sheet.getRange('C2').setValue(channelTitle || '');
+    }
+    // D2 は後から追加した項目のため、既存シートにも補完する
+    if (videoId && !videoIdCell) {
+      setVideoId_(sheet, videoId);
     }
     return sheet;
   }
@@ -106,11 +116,22 @@ function getOrCreateVideoSheet_(ss, sheetName, fullTitle, publishedAt, channelId
   sheet.getRange('A2').setValue(publishedAt);
   sheet.getRange('B2').setValue(channelId   || '');
   sheet.getRange('C2').setValue(channelTitle || '');
+  setVideoId_(sheet, videoId || '');
   sheet.getRange('A3:B3').setValues([['日時', '再生数']]).setBackground('#eeeeee');
   sheet.setFrozenRows(3);
   sheet.appendRow([publishedAt, 0]); // 投稿日時点の起点レコード（再生数 = 0）
 
   return sheet;
+}
+
+/**
+ * 動画 ID を D2 に文字列として書き込む。
+ * 数字だけの ID や指数表記に見える ID が数値へ変換されないよう、先に表示形式を文字列にする。
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @param {string} videoId
+ */
+function setVideoId_(sheet, videoId) {
+  sheet.getRange('D2').setNumberFormat('@').setValue(videoId);
 }
 
 /**
