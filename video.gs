@@ -91,17 +91,20 @@ function getOrCreateVideoSheet_(ss, sheetName, fullTitle, publishedAt, channelId
   let sheet = ss.getSheetByName(sheetName);
 
   if (sheet) {
-    if (!sheet.getRange('A2').getValue()) {
+    // ヘッダー行は 1 回で読む（全動画 × 毎実行で効いてくるため）
+    const [publishedCell, channelIdCell, , videoIdCell] = sheet.getRange('A2:D2').getValues()[0];
+
+    if (!publishedCell) {
       sheet.getRange('A2').setValue(publishedAt);
     }
     // 既存シートにチャンネル情報が未記入の場合のみ補完
-    if (channelId && !sheet.getRange('B2').getValue()) {
+    if (channelId && !channelIdCell) {
       sheet.getRange('B2').setValue(channelId);
       sheet.getRange('C2').setValue(channelTitle || '');
     }
     // D2 は後から追加した項目のため、既存シートにも補完する
-    if (videoId && !sheet.getRange('D2').getValue()) {
-      sheet.getRange('D2').setValue(videoId);
+    if (videoId && !videoIdCell) {
+      setVideoId_(sheet, videoId);
     }
     return sheet;
   }
@@ -113,12 +116,22 @@ function getOrCreateVideoSheet_(ss, sheetName, fullTitle, publishedAt, channelId
   sheet.getRange('A2').setValue(publishedAt);
   sheet.getRange('B2').setValue(channelId   || '');
   sheet.getRange('C2').setValue(channelTitle || '');
-  sheet.getRange('D2').setValue(videoId     || '');
+  setVideoId_(sheet, videoId || '');
   sheet.getRange('A3:B3').setValues([['日時', '再生数']]).setBackground('#eeeeee');
   sheet.setFrozenRows(3);
   sheet.appendRow([publishedAt, 0]); // 投稿日時点の起点レコード（再生数 = 0）
 
   return sheet;
+}
+
+/**
+ * 動画 ID を D2 に文字列として書き込む。
+ * 数字だけの ID や指数表記に見える ID が数値へ変換されないよう、先に表示形式を文字列にする。
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @param {string} videoId
+ */
+function setVideoId_(sheet, videoId) {
+  sheet.getRange('D2').setNumberFormat('@').setValue(videoId);
 }
 
 /**
