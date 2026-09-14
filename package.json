@@ -21,6 +21,6 @@
   },
   "homepage": "https://github.com/reipan2265/get-youtube-playcount#readme",
   "devDependencies": {
-    "@types/google-apps-script": "^2.0.12"
+    "@types/google-apps-script": "^2.0.13"
   }
 }
